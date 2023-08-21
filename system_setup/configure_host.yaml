@@ -27,6 +27,7 @@
       when: ansible_hostname != item or ansible_hostname == item
       with_items: "{{groups['all']}}"
 
+    # TODO: Use the user module instead of shell here, as its cleaner
     - name: SSH KeyGen command
       shell: >
         ssh-keygen -q -b 2048 -t rsa -N "" -C "creating SSH" -f ~/.ssh/id_rsa
