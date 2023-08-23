@@ -1,10 +1,10 @@
-cluster:
+worker:
   hosts:
     op1:
     op2:
     op3:
     op4:
-jetson:
+manager:
   hosts:
     jetson:
 

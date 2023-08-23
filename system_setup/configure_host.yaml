@@ -1,6 +1,5 @@
 - name: "Configure defaults on nodes"
   hosts: all
-  gather_facts: yes
   tasks:
     - name: Update System
       become: true
@@ -81,4 +80,23 @@
         - openssh-server
         - nfs-server
         - nfs-client
+
+    - name: export NFS
+      become: true
+      ansible.posix.mount:
+        path: /slurp
+        src: /dev/mmcblk1
+        fstype: nfs
+        opts: rw,sync,no_root_squash,no_subtree_check
+        state: present
+      when: inventory_hostname in groups["manager"]
+
+    - name: import NFS
+      become: true
+      ansible.posix.mount:
+        src: jetson:/slurp
+        path: /slurp
+        fstype: nfs
+        state: mounted
+      when: inventory_hostname in groups["worker"]
 
