@@ -76,10 +76,14 @@
       become: true
       ansible.builtin.apt:
         name:
-        - mpich
         - openssh-server
         - nfs-server
         - nfs-client
+        - gcc
+        - openmpi-bin
+        - openmpi-common
+        - libopenmpi-dev
+        - libgtk2.0-dev
 
     - name: export NFS
       become: true
