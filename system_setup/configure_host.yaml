@@ -5,6 +5,7 @@
     - name: Update System
       become: true
       ansible.builtin.apt:
+        name: "*"
         autoclean: true
         autoremove: true
         update_cache: true
@@ -27,29 +28,6 @@
       when: ansible_hostname != item or ansible_hostname == item
       with_items: "{{groups['all']}}"
 
-    # TODO: Use the user module instead of shell here, as its cleaner
-    - name: SSH KeyGen command
-      shell: >
-        ssh-keygen -q -b 2048 -t rsa -N "" -C "creating SSH" -f ~/.ssh/id_rsa
-        creates="~/.ssh/id_rsa"
-
-    - name: Fetch the keyfile from the node to master
-      tags: run
-      ansible.builtin.fetch:
-        src: "~/.ssh/id_rsa.pub"
-        dest: "/tmp/buffer/{{ansible_hostname}}-id_rsa.pub"
-        flat: yes
-
-    - name: Copy the key add to authorized_keys using Ansible module
-      tags: runcd
-      authorized_key:
-        user: leightc
-        state: present
-        key: "{{ lookup('file','/tmp/buffer/{{item}}-id_rsa.pub') }}"
-      when: item != ansible_hostname
-      with_items:
-        - "{{ groups['all'] }}"
-
     - name: disable motd noise
       become: true
       ansible.builtin.file:
@@ -57,10 +35,29 @@
         path: /etc/update-motd.d/
         mode: '0644'
 
+    - name: Create leightc ssh key
+      become: true
+      ansible.builtin.user:
+        name: leightc
+        generate_ssh_key: yes
+        ssh_key_bits: 2048
+        ssh_key_file: .ssh/id_rsa
+      register: leightc_ssh_key
+
+    - name: Add leightc keys across nodes
+      ansible.posix.authorized_key:
+        user: leightc
+        state: present
+        key: "{{ hostvars[item].leightc_ssh_key.ssh_public_key }}"
+      when: item != ansible_hostname
+      with_items:
+        - "{{ groups['all'] }}"
+
     - name: Create mpi user
       become: true
       ansible.builtin.user:
         name: mpiuser
+        group: sudo
         generate_ssh_key: yes
         ssh_key_bits: 2048
         ssh_key_file: .ssh/id_rsa
@@ -75,4 +72,13 @@
       when: item != ansible_hostname
       with_items:
         - "{{ groups['all'] }}"
+
+    - name: Install dependencies
+      become: true
+      ansible.builtin.apt:
+        name:
+        - mpich
+        - openssh-server
+        - nfs-server
+        - nfs-client
 
